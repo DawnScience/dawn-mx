@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.dawb.common.ui.editorExtension">
+      <editor_extension
+            class="org.dawnsci.mx.ui.editors.MXPlotImageEditor">
+      </editor_extension>
+   </extension>
+
+</plugin>
