@@ -72,7 +72,9 @@ import org.slf4j.LoggerFactory;
 
 import uk.ac.diamond.scisoft.analysis.dataset.AbstractDataset;
 import uk.ac.diamond.scisoft.analysis.diffraction.DetectorProperties;
+import uk.ac.diamond.scisoft.analysis.diffraction.DetectorPropertyEvent;
 import uk.ac.diamond.scisoft.analysis.diffraction.DiffractionCrystalEnvironment;
+import uk.ac.diamond.scisoft.analysis.diffraction.IDetectorPropertyListener;
 import uk.ac.diamond.scisoft.analysis.diffraction.Resolution;
 import uk.ac.diamond.scisoft.analysis.io.IDiffractionMetadata;
 import uk.ac.diamond.scisoft.analysis.io.IMetaData;
@@ -92,7 +94,7 @@ import org.dawnsci.mx.ui.Activator;
  * editor will not show.
  * 
  */
-public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IEditorExtension {
+public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IEditorExtension, IDetectorPropertyListener {
 	
 	public static final String ID = "uk.ac.diamond.scisoft.mx.rcp.editors.mxplotimageeditor";
 
@@ -509,6 +511,9 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 						IDiffractionMetadata localDiffractionMetaData = (IDiffractionMetadata)localMetaData;
 						detConfig = localDiffractionMetaData.getDetector2DProperties();
 						diffEnv = localDiffractionMetaData.getDiffractionCrystalEnvironment();
+						
+						// TODO Listen to properties changing
+						//localDiffractionMetaData.getDetector2DProperties().addDetectorPropertyListener(MXPlotEditor.this);
 					}
 				} catch (Exception e) {
 					logger.error("Could not create diffraction experiment objects");
@@ -569,6 +574,9 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
     public void dispose() {
      	if (plottingSystem!=null) plottingSystem.dispose();
      	super.dispose();
+     	
+		// TODO remove this as a listener for detector properties.
+        
     }
 
     @Override
@@ -608,5 +616,11 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 				return true;
 		}
 		return false;
+	}
+
+	@Override
+	public void detectorPropertiesChanged(DetectorPropertyEvent evt) {
+		// TODO Karl can we listen to changed properties ok?
+		
 	}
 }
