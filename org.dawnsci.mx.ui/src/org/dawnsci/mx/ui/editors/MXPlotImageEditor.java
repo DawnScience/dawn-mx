@@ -493,7 +493,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 				}
 
 				set.setName(""); // Stack trace if null - stupid.
-				ITrace trace = plottingSystem.createPlot2D(set, null, monitor);
+				ITrace trace = plottingSystem.updatePlot2D(set, null, monitor);
 				
 				// Set the palette to negative gray scale ("film negative")
 				if (trace instanceof IImageTrace) {
