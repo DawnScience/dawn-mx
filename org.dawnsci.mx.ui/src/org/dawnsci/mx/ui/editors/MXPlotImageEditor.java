@@ -35,12 +35,12 @@ import org.dawb.common.ui.plot.trace.ITrace;
 import org.dawb.common.ui.util.EclipseUtils;
 import org.dawb.common.ui.util.GridUtils;
 import org.dawb.common.ui.views.HeaderTablePage;
+import org.dawb.workbench.plotting.system.swtxy.selection.AbstractSelectionRegion;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.draw2d.ColorConstants;
-import org.eclipse.draw2d.Label;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.MenuManager;
@@ -317,9 +317,9 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		region.setUserRegion(false);
 		region.setMobile(false);
 		
-		Label label = new Label(labelText);
-		label.setForegroundColor(labelColour);
-		region.setLabel(label);
+		region.setLabel(labelText);
+		((AbstractSelectionRegion)region).setShowLabel(true);
+		((AbstractSelectionRegion)region).setForegroundColor(labelColour);
 		
 		region.setShowPosition(false);
 		plottingSystem.addRegion(region);
@@ -346,13 +346,12 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		region.setAlpha(100);
 		region.setUserRegion(false);
 		region.setShowPosition(false);
-
-		Label label = new Label(labelText);
-		label.setForegroundColor(labelColour);
+		
+		region.setLabel(labelText);
+		((AbstractSelectionRegion)region).setShowLabel(true);
 		
 		plottingSystem.addRegion(region);
 		region.setMobile(false); // NOTE: Must be done **AFTER** calling the addRegion method.
-		region.setLabel(label);  // NOTE: Must be done **AFTER** calling the addRegion method in order for the label colour to be used.
 
 		return region;
 	}
@@ -493,7 +492,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 				}
 
 				set.setName(""); // Stack trace if null - stupid.
-				ITrace trace = plottingSystem.createPlot2D(set, null, monitor);
+				ITrace trace = plottingSystem.updatePlot2D(set, null, monitor);
 				
 				// Set the palette to negative gray scale ("film negative")
 				if (trace instanceof IImageTrace) {
@@ -513,7 +512,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 						diffEnv = localDiffractionMetaData.getDiffractionCrystalEnvironment();
 						
 						// TODO Listen to properties changing
-						//localDiffractionMetaData.getDetector2DProperties().addDetectorPropertyListener(MXPlotEditor.this);
+						detConfig.addDetectorPropertyListener(MXPlotImageEditor.this);
 					}
 				} catch (Exception e) {
 					logger.error("Could not create diffraction experiment objects");
@@ -576,7 +575,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
      	super.dispose();
      	
 		// TODO remove this as a listener for detector properties.
-        
+        detConfig.removeDetectorPropertyListener(MXPlotImageEditor.this);
     }
 
     @Override
@@ -621,6 +620,9 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	@Override
 	public void detectorPropertiesChanged(DetectorPropertyEvent evt) {
 		// TODO Karl can we listen to changed properties ok?
-		
+		String property = evt.getPropertyName();
+		if ("Beam Center".equals(property)) {
+			drawBeamCentre();
+		}
 	}
 }
