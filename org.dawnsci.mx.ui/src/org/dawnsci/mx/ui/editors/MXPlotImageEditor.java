@@ -300,7 +300,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	/*
 	 * handle ring drawing, removal and clearing
 	 */
-	protected IRegion drawRing(int[] beamCentre, double innerRadius, double outerRadius, Color colour, Color labelColour, String nameStub, String labelText) {
+	protected IRegion drawRing(double[] beamCentre, double innerRadius, double outerRadius, Color colour, Color labelColour, String nameStub, String labelText) {
 		IRegion region;
 		try {
 			final String regionName = RegionUtils.getUniqueName(nameStub, plottingSystem);
@@ -357,10 +357,16 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	}
 	
 	protected IRegion drawResolutionRing(ResolutionRing ring, String name) {
-		int[] beamCentre = detConfig.pixelCoords(detConfig.getBeamPosition());
-		double radius = Resolution.circularResolutionRingRadius(detConfig, diffEnv, ring.getResolution());
-		DecimalFormat df = new DecimalFormat("#.00");
-		return drawRing(beamCentre, radius, radius+4.0, ring.getColour(), ring.getColour(), name, df.format(ring.getResolution())+"Å");
+		double[] beamCentre;
+		double radius;
+		if (detConfig != null && diffEnv != null) {
+			beamCentre = detConfig.getBeamLocation(); // detConfig.pixelCoords(detConfig.getBeamPosition());
+			radius = Resolution.circularResolutionRingRadius(detConfig, diffEnv, ring.getResolution());
+			DecimalFormat df = new DecimalFormat("#.00");
+			return drawRing(beamCentre, radius, radius+4.0, ring.getColour(), ring.getColour(), name, df.format(ring.getResolution())+"Å");
+		}
+		else
+			return null;
 	}
 	
 	protected ArrayList<IRegion> drawResolutionRings(ResolutionRingList ringList, String typeName) {
@@ -416,23 +422,24 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	}
 	
 	protected void drawBeamCentre() {
-		if (!beamCentre.isChecked()) {
-			if (beamCentreRegion != null)
-				plottingSystem.removeRegion(beamCentreRegion);
-		}
-		else if (detConfig != null) {
-			double[] beamCentrePC = detConfig.getBeamLocation();
-			double length = (1 + Math.sqrt(detConfig.getPx() * detConfig.getPx() + detConfig.getPy() * detConfig.getPy()) * 0.01);
-			DecimalFormat df = new DecimalFormat("#.##");
-			String label = df.format(beamCentrePC[0]) + "px, " + df.format(beamCentrePC[1])+"px";
-			beamCentreRegion = drawCrosshairs(beamCentrePC, length, ColorConstants.red, ColorConstants.black, "beam centre", label);
-		}
-		else {
-			final AbstractDataset image = imageTrace.getData();
-			double[] beamCentrePC = new double[]{image.getShape()[1]/2d, image.getShape()[0]/2d};
-			DecimalFormat df = new DecimalFormat("#.##");
-			String label = df.format(beamCentrePC[0]) + "px, " + df.format(beamCentrePC[1])+"px";
-	    	beamCentreRegion = drawCrosshairs(beamCentrePC, image.getShape()[1]/100, ColorConstants.red, ColorConstants.black, "beam centre", label);
+		if (beamCentreRegion != null)
+			plottingSystem.removeRegion(beamCentreRegion);
+
+		if (beamCentre.isChecked()) {
+			if (detConfig != null) {
+				double[] beamCentrePC = detConfig.getBeamLocation();
+				double length = (1 + Math.sqrt(detConfig.getPx() * detConfig.getPx() + detConfig.getPy() * detConfig.getPy()) * 0.01);
+				DecimalFormat df = new DecimalFormat("#.##");
+				String label = df.format(beamCentrePC[0]) + "px, " + df.format(beamCentrePC[1])+"px";
+				beamCentreRegion = drawCrosshairs(beamCentrePC, length, ColorConstants.red, ColorConstants.black, "beam centre", label);
+			}
+			else {
+				final AbstractDataset image = imageTrace.getData();
+				double[] beamCentrePC = new double[]{image.getShape()[1]/2d, image.getShape()[0]/2d};
+				DecimalFormat df = new DecimalFormat("#.##");
+				String label = df.format(beamCentrePC[0]) + "px, " + df.format(beamCentrePC[1])+"px";
+				beamCentreRegion = drawCrosshairs(beamCentrePC, image.getShape()[1]/100, ColorConstants.red, ColorConstants.black, "beam centre", label);
+			}
 		}
 	}
 
@@ -575,7 +582,8 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
      	super.dispose();
      	
 		// TODO remove this as a listener for detector properties.
-        detConfig.removeDetectorPropertyListener(MXPlotImageEditor.this);
+     	if (detConfig != null)
+     		detConfig.removeDetectorPropertyListener(MXPlotImageEditor.this);
     }
 
     @Override
