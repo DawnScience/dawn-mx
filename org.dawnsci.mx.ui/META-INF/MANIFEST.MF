@@ -26,4 +26,5 @@ Import-Package: org.dawb.common.services,
  uk.ac.diamond.scisoft.analysis.io,
  uk.ac.diamond.scisoft.analysis.rcp,
  uk.ac.diamond.scisoft.analysis.rcp.preference,
- uk.ac.diamond.scisoft.analysis.roi
+ uk.ac.diamond.scisoft.analysis.roi,
+ uk.ac.diamond.sda.meta.page

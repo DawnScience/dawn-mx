@@ -74,7 +74,9 @@ import uk.ac.diamond.scisoft.analysis.dataset.AbstractDataset;
 import uk.ac.diamond.scisoft.analysis.diffraction.DetectorProperties;
 import uk.ac.diamond.scisoft.analysis.diffraction.DetectorPropertyEvent;
 import uk.ac.diamond.scisoft.analysis.diffraction.DiffractionCrystalEnvironment;
+import uk.ac.diamond.scisoft.analysis.diffraction.DiffractionCrystalEnvironmentEvent;
 import uk.ac.diamond.scisoft.analysis.diffraction.IDetectorPropertyListener;
+import uk.ac.diamond.scisoft.analysis.diffraction.IDiffractionCrystalEnvironmentListener;
 import uk.ac.diamond.scisoft.analysis.diffraction.Resolution;
 import uk.ac.diamond.scisoft.analysis.io.IDiffractionMetadata;
 import uk.ac.diamond.scisoft.analysis.io.IMetaData;
@@ -85,6 +87,9 @@ import uk.ac.diamond.scisoft.analysis.roi.ResolutionRing;
 import uk.ac.diamond.scisoft.analysis.roi.ResolutionRingList;
 import uk.ac.diamond.scisoft.analysis.roi.SectorROI;
 
+import uk.ac.diamond.sda.meta.page.DiffractionMetadataCompositeEvent;
+import uk.ac.diamond.sda.meta.page.IDiffractionMetadataCompositeListener;
+
 import org.dawnsci.mx.ui.Activator;
 
 /**
@@ -94,7 +99,8 @@ import org.dawnsci.mx.ui.Activator;
  * editor will not show.
  * 
  */
-public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IEditorExtension, IDetectorPropertyListener {
+public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IEditorExtension, 
+	IDetectorPropertyListener, IDiffractionCrystalEnvironmentListener, IDiffractionMetadataCompositeListener {
 	
 	public static final String ID = "uk.ac.diamond.scisoft.mx.rcp.editors.mxplotimageeditor";
 
@@ -248,7 +254,10 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		beamCentre = new Action("Beam centre", Activator.getImageDescriptor("/icons/beam_centre.png")) {
 			@Override
 			public void run() {
-				drawBeamCentre();
+				if (beamCentre.isChecked())
+					drawBeamCentre();
+				else if (beamCentreRegion != null)
+					plottingSystem.removeRegion(beamCentreRegion);
 			}
 		};
 		beamCentre.setChecked(false);
@@ -378,11 +387,10 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	}
 	
 	protected void drawStandardRings() {
-		if (!standardRings.isChecked()) {
-			if (standardRingsRegionList != null && standardRingsList != null)
-				removeRings(standardRingsRegionList, standardRingsList); 
-		}
-		else if (diffEnv!= null && detConfig != null) {
+		if (standardRingsRegionList != null && standardRingsList != null)
+			removeRings(standardRingsRegionList, standardRingsList); 
+
+		if (standardRings.isChecked() && diffEnv!= null && detConfig != null) {
 			standardRingsList = new ResolutionRingList();
 			Double numberEvenSpacedRings = 6.0;
 			double lambda = diffEnv.getWavelength();
@@ -406,14 +414,11 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	}
 
 	protected void drawIceRings() {
-		if (!iceRings.isChecked()) {
-			if (iceRingsRegionList!=null && iceRingsList!=null) {
-				removeRings(iceRingsRegionList, iceRingsList);
-			}
-		}
-		else {
+		if (iceRingsRegionList!=null && iceRingsList!=null)
+			removeRings(iceRingsRegionList, iceRingsList);
+		
+		if (iceRings.isChecked()) {
 			iceRingsList = new ResolutionRingList();
-			
 			for (double res : iceResolution) {
 				iceRingsList.add(new ResolutionRing(res, true, ColorConstants.blue, true, false, false));
 			}
@@ -424,8 +429,8 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	protected void drawBeamCentre() {
 		if (beamCentreRegion != null)
 			plottingSystem.removeRegion(beamCentreRegion);
-
-		if (beamCentre.isChecked()) {
+			
+		if (beamCentre.isChecked()) { 
 			if (detConfig != null) {
 				double[] beamCentrePC = detConfig.getBeamLocation();
 				double length = (1 + Math.sqrt(detConfig.getPx() * detConfig.getPx() + detConfig.getPy() * detConfig.getPy()) * 0.01);
@@ -444,13 +449,11 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	}
 
 	protected void drawCalibrantRings() {
-		// Remove rings if unchecked
-		if (!calibrantRings.isChecked()) {
-			if (calibrantRingsRegionList!=null && calibrantRingsList != null) {
-				removeRings(calibrantRingsRegionList, calibrantRingsList);
-			}
+		if (calibrantRingsRegionList!=null && calibrantRingsList != null) {
+			removeRings(calibrantRingsRegionList, calibrantRingsList);
 		}
-		else {
+
+		if (calibrantRings.isChecked()) {
 			calibrantRingsList = new ResolutionRingList();
 
 			IPreferenceStore preferenceStore = AnalysisRCPActivator.getDefault().getPreferenceStore();
@@ -520,6 +523,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 						
 						// TODO Listen to properties changing
 						detConfig.addDetectorPropertyListener(MXPlotImageEditor.this);
+						diffEnv.addDiffractionCrystalEnvironmentListener(MXPlotImageEditor.this);
 					}
 				} catch (Exception e) {
 					logger.error("Could not create diffraction experiment objects");
@@ -581,9 +585,12 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
      	if (plottingSystem!=null) plottingSystem.dispose();
      	super.dispose();
      	
-		// TODO remove this as a listener for detector properties.
      	if (detConfig != null)
      		detConfig.removeDetectorPropertyListener(MXPlotImageEditor.this);
+
+     	if (diffEnv != null)
+     		diffEnv.removeDiffractionCrystalEnvironmentListener(MXPlotImageEditor.this);
+     	
     }
 
     @Override
@@ -627,10 +634,45 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 
 	@Override
 	public void detectorPropertiesChanged(DetectorPropertyEvent evt) {
-		// TODO Karl can we listen to changed properties ok?
 		String property = evt.getPropertyName();
 		if ("Beam Center".equals(property)) {
 			drawBeamCentre();
+			drawStandardRings();
+			drawIceRings();
+			drawCalibrantRings();
+		}
+		else if ("Origin".equals(property)) {
+			drawBeamCentre();
+			drawStandardRings();
+			drawIceRings();
+			drawCalibrantRings();
 		}
 	}
+	
+	@Override
+	public void diffractionCrystalEnvironmentChanged(DiffractionCrystalEnvironmentEvent evt) {
+		String property = evt.getPropertyName();
+		if ("Wavelength".equals(property)) {
+			drawStandardRings();
+			drawIceRings();
+			drawCalibrantRings();
+		}
+	}
+
+	@Override
+	public void diffractionMetadataCompositeChanged(DiffractionMetadataCompositeEvent evt) {
+		String property = evt.getPropertyName();
+		if ("Beam Center".equals(property)) {
+			if (beamCentre.isChecked()) {
+				beamCentre.setChecked(false);
+				plottingSystem.removeRegion(beamCentreRegion);
+			}
+			else {
+				beamCentre.setChecked(true);
+				drawBeamCentre();
+			}
+		}
+	}
+
+
 }
