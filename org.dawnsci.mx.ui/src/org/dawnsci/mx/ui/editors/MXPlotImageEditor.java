@@ -78,6 +78,7 @@ import uk.ac.diamond.scisoft.analysis.diffraction.DiffractionCrystalEnvironmentE
 import uk.ac.diamond.scisoft.analysis.diffraction.IDetectorPropertyListener;
 import uk.ac.diamond.scisoft.analysis.diffraction.IDiffractionCrystalEnvironmentListener;
 import uk.ac.diamond.scisoft.analysis.diffraction.Resolution;
+import uk.ac.diamond.scisoft.analysis.io.DiffractionMetaDataAdapter;
 import uk.ac.diamond.scisoft.analysis.io.IDiffractionMetadata;
 import uk.ac.diamond.scisoft.analysis.io.IMetaData;
 import uk.ac.diamond.scisoft.analysis.rcp.AnalysisRCPActivator;
@@ -120,8 +121,8 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		1.918, 1.883, 1.721 };// angstrom
 
 	// data that is being plotted
-	protected DetectorProperties detConfig;
-	protected DiffractionCrystalEnvironment diffEnv;
+	protected DetectorProperties detprop;
+	protected DiffractionCrystalEnvironment diffenv;
 	
 	// Standard rings
 	ResolutionRingList standardRingsList;
@@ -367,9 +368,9 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	protected IRegion drawResolutionRing(ResolutionRing ring, String name) {
 		double[] beamCentre;
 		double radius;
-		if (detConfig != null && diffEnv != null) {
-			beamCentre = detConfig.getBeamLocation(); // detConfig.pixelCoords(detConfig.getBeamPosition());
-			radius = Resolution.circularResolutionRingRadius(detConfig, diffEnv, ring.getResolution());
+		if (detprop != null && diffenv != null) {
+			beamCentre = detprop.getBeamLocation(); // detConfig.pixelCoords(detConfig.getBeamPosition());
+			radius = Resolution.circularResolutionRingRadius(detprop, diffenv, ring.getResolution());
 			DecimalFormat df = new DecimalFormat("#.00");
 			return drawRing(beamCentre, radius, radius+4.0, ring.getColour(), ring.getColour(), name, df.format(ring.getResolution())+"Å");
 		}
@@ -389,15 +390,15 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		if (standardRingsRegionList != null && standardRingsList != null)
 			removeRings(standardRingsRegionList, standardRingsList); 
 
-		if (standardRings.isChecked() && diffEnv!= null && detConfig != null) {
+		if (standardRings.isChecked() && diffenv!= null && detprop != null) {
 			standardRingsList = new ResolutionRingList();
 			Double numberEvenSpacedRings = 6.0;
-			double lambda = diffEnv.getWavelength();
-			Vector3d longestVector = detConfig.getLongestVector();
+			double lambda = diffenv.getWavelength();
+			Vector3d longestVector = detprop.getLongestVector();
 			double step = longestVector.length() / numberEvenSpacedRings; 
 			double d, twoThetaSpacing;
 			Vector3d toDetectorVector = new Vector3d();
-			Vector3d beamVector = detConfig.getBeamPosition();
+			Vector3d beamVector = detprop.getBeamPosition();
 			for (int i = 0; i < numberEvenSpacedRings - 1; i++) {
 				// increase the length of the vector by step.
 				longestVector.normalize();
@@ -430,9 +431,9 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 			plottingSystem.removeRegion(beamCentreRegion);
 			
 		if (beamCentre.isChecked()) { 
-			if (detConfig != null) {
-				double[] beamCentrePC = detConfig.getBeamLocation();
-				double length = (1 + Math.sqrt(detConfig.getPx() * detConfig.getPx() + detConfig.getPy() * detConfig.getPy()) * 0.01);
+			if (detprop != null) {
+				double[] beamCentrePC = detprop.getBeamLocation();
+				double length = (1 + Math.sqrt(detprop.getPx() * detprop.getPx() + detprop.getPy() * detprop.getPy()) * 0.01);
 				DecimalFormat df = new DecimalFormat("#.##");
 				String label = df.format(beamCentrePC[0]) + "px, " + df.format(beamCentrePC[1])+"px";
 				beamCentreRegion = drawCrosshairs(beamCentrePC, length, ColorConstants.red, ColorConstants.black, "beam centre", label);
@@ -517,13 +518,73 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 					IMetaData localMetaData = set.getMetadata();
 					if (localMetaData instanceof IDiffractionMetadata) {
 						IDiffractionMetadata localDiffractionMetaData = (IDiffractionMetadata)localMetaData;
-						detConfig = localDiffractionMetaData.getDetector2DProperties();
-						diffEnv = localDiffractionMetaData.getDiffractionCrystalEnvironment();
+						detprop = localDiffractionMetaData.getDetector2DProperties();
+						diffenv = localDiffractionMetaData.getDiffractionCrystalEnvironment();
 						
-						// TODO Listen to properties changing
-						detConfig.addDetectorPropertyListener(MXPlotImageEditor.this);
-						diffEnv.addDiffractionCrystalEnvironmentListener(MXPlotImageEditor.this);
 					}
+					else {
+						
+						// Get image size in x and y directions
+						int[] shape = set.getShape();
+						int heightInPixels = shape[0];
+						int widthInPixels = shape[1];
+						
+						// Set a few default values
+						double pixelSizeX = 0.1024;
+						double pixelSizeY = 0.1024;
+						double distance = 200.00;
+
+						// Create the detector origin vector based on the above
+						double[] detectorOrigin = { (widthInPixels - widthInPixels/2d) * pixelSizeX, (heightInPixels - heightInPixels/2d) * pixelSizeY, distance };
+						
+						// The rotation of the detector relative to the reference frame - assume no rotation
+						double detectorRotationX = 0.0; 
+						double detectorRotationY = 0.0; 
+						double detectorRotationZ = 0.0; 
+
+						detprop = new DetectorProperties(new Vector3d(detectorOrigin), heightInPixels, widthInPixels, 
+								pixelSizeX, pixelSizeY, detectorRotationX, detectorRotationY, detectorRotationZ);
+						
+						// Set a few default values
+						double lambda = 0.9;
+						double startOmega = 0.0;
+						double rangeOmega = 1.0;
+						double exposureTime = 1.0;
+						
+						diffenv = new DiffractionCrystalEnvironment(lambda, startOmega, rangeOmega, exposureTime);
+						
+						localMetaData = new DiffractionMetaDataAdapter() {
+							@Override
+							public DiffractionCrystalEnvironment getDiffractionCrystalEnvironment() {
+								return MXPlotImageEditor.this.diffenv;
+							}
+
+							@Override
+							public DetectorProperties getDetector2DProperties() {
+								return MXPlotImageEditor.this.detprop;
+							}
+
+							@Override
+							public DiffractionMetaDataAdapter clone() {
+								return new DiffractionMetaDataAdapter() {
+									@Override
+									public DiffractionCrystalEnvironment getDiffractionCrystalEnvironment() {
+										return MXPlotImageEditor.this.diffenv.clone();
+									}
+
+									@Override
+									public DetectorProperties getDetector2DProperties() {
+										return MXPlotImageEditor.this.detprop.clone();
+									}
+								};
+							}
+						};
+						
+						set.setMetadata(localMetaData);
+					}
+					// TODO Listen to properties changing
+					detprop.addDetectorPropertyListener(MXPlotImageEditor.this);
+					diffenv.addDiffractionCrystalEnvironmentListener(MXPlotImageEditor.this);
 				} catch (Exception e) {
 					logger.error("Could not create diffraction experiment objects");
 				}
@@ -584,11 +645,11 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
      	if (plottingSystem!=null) plottingSystem.dispose();
      	super.dispose();
      	
-     	if (detConfig != null)
-     		detConfig.removeDetectorPropertyListener(MXPlotImageEditor.this);
+     	if (detprop != null)
+     		detprop.removeDetectorPropertyListener(MXPlotImageEditor.this);
 
-     	if (diffEnv != null)
-     		diffEnv.removeDiffractionCrystalEnvironmentListener(MXPlotImageEditor.this);
+     	if (diffenv != null)
+     		diffenv.removeDiffractionCrystalEnvironmentListener(MXPlotImageEditor.this);
      	
     }
 
