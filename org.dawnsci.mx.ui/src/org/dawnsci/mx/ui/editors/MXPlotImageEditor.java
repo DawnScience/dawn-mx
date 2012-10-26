@@ -140,7 +140,6 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	Action standardRings, iceRings, calibrantRings, beamCentre;
 	
 	public MXPlotImageEditor() {
-	
 		try {
 	        this.plottingSystem = PlottingFactory.createPlottingSystem();
 	        plottingSystem.setColorOption(ColorOption.NONE);
@@ -618,17 +617,16 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		else
 			mxImageGlobal = preferenceStore.getBoolean(PreferenceConstants.DIFFRACTION_VIEWER_MX_IMAGE_GLOBAL);
 
-		if 	("mccd".equalsIgnoreCase(extension) || "img".equalsIgnoreCase(extension) || "cbf".equalsIgnoreCase(extension)) {
-			if (mxImageGlobal) 
-				return true;
+		if (mxImageGlobal) 
+			return true;
 		
-			final String MXLIVE_ID = "uk.ac.diamond.sda.mxlive.mxliveperspective";
-			final String DIVA_ID = "uk.ac.diamond.scisoft.diffractionviewerperspective";
-			final String MX_ID = "uk.ac.diamond.scisoft.mx.rcp.mxperspective";
-			if (MX_ID.equalsIgnoreCase(perspectiveId) || MXLIVE_ID.equalsIgnoreCase(perspectiveId) 
-					|| DIVA_ID.equalsIgnoreCase(perspectiveId))
-				return true;
-		}
+		final String MXLIVE_ID = "uk.ac.diamond.sda.mxlive.mxliveperspective";
+		final String DIVA_ID = "uk.ac.diamond.scisoft.diffractionviewerperspective";
+		final String MX_ID = "uk.ac.diamond.scisoft.mx.rcp.mxperspective";
+		if (MX_ID.equalsIgnoreCase(perspectiveId) || MXLIVE_ID.equalsIgnoreCase(perspectiveId) 
+				|| DIVA_ID.equalsIgnoreCase(perspectiveId))
+			return true;
+
 		return false;
 	}
 
@@ -647,6 +645,18 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 			drawIceRings();
 			drawCalibrantRings();
 		}
+		else if ("HPxSize".equals(property)) {
+			drawBeamCentre();
+			drawStandardRings();
+			drawIceRings();
+			drawCalibrantRings();
+		}		
+		else if ("VPxSize".equals(property)) {
+			drawBeamCentre();
+			drawStandardRings();
+			drawIceRings();
+			drawCalibrantRings();
+		}		
 	}
 	
 	@Override
