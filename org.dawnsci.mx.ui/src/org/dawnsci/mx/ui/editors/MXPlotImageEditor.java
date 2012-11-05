@@ -83,6 +83,7 @@ import uk.ac.diamond.scisoft.analysis.io.IDiffractionMetadata;
 import uk.ac.diamond.scisoft.analysis.io.IMetaData;
 import uk.ac.diamond.scisoft.analysis.rcp.AnalysisRCPActivator;
 import uk.ac.diamond.scisoft.analysis.rcp.preference.PreferenceConstants;
+import uk.ac.diamond.scisoft.analysis.roi.EllipticalROI;
 import uk.ac.diamond.scisoft.analysis.roi.LinearROI;
 import uk.ac.diamond.scisoft.analysis.roi.ResolutionRing;
 import uk.ac.diamond.scisoft.analysis.roi.ResolutionRingList;
@@ -336,6 +337,34 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		return region;
 	}
 	
+	/*
+	 * handle ring drawing, removal and clearing
+	 */
+	protected IRegion drawEllipse(double[] beamCentre, EllipticalROI eroi, Color colour, Color labelColour, String nameStub, String labelText) {
+		IRegion region;
+		try {
+			final String regionName = RegionUtils.getUniqueName(nameStub, plottingSystem);
+			region = plottingSystem.createRegion(regionName, RegionType.ELLIPSE);
+		} catch (Exception e) {
+			logger.error("Can't create region", e);
+			return null;
+		}
+		region.setROI(eroi);
+		region.setRegionColor(colour);
+		region.setAlpha(100);
+		region.setUserRegion(false);
+		region.setMobile(false);
+		
+		region.setLabel(labelText);
+		((AbstractSelectionRegion)region).setShowLabel(true);
+		((AbstractSelectionRegion)region).setForegroundColor(labelColour);
+		
+		region.setShowPosition(false);
+		plottingSystem.addRegion(region);
+		
+		return region;
+	}
+
 	protected IRegion drawCrosshairs(double[] beamCentre, double length, Color colour, Color labelColour, String nameStub, String labelText) {
 		IRegion region;
 		try {
@@ -378,10 +407,23 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 			return null;
 	}
 	
+	protected IRegion drawResolutionEllipse(ResolutionRing ring, String name) {
+		double[] beamCentre;
+		if (detprop != null && diffenv != null) {
+			beamCentre = detprop.getBeamLocation(); // detConfig.pixelCoords(detConfig.getBeamPosition());
+			EllipticalROI ellipse = Resolution.ellipseFromResolution(detprop, diffenv, ring.getResolution());
+			DecimalFormat df = new DecimalFormat("#.00");
+			return drawEllipse(beamCentre, ellipse, ring.getColour(), ring.getColour(), name, df.format(ring.getResolution())+"Å");
+		}
+		else
+			return null;
+	}
+
 	protected ArrayList<IRegion> drawResolutionRings(ResolutionRingList ringList, String typeName) {
 		ArrayList<IRegion> regions = new ArrayList<IRegion>(); 
 		for (int i = 0; i < ringList.size(); i++) {
-			regions.add(drawResolutionRing(ringList.get(i), typeName+i));
+//			regions.add(drawResolutionRing(ringList.get(i), typeName+i));
+			regions.add(drawResolutionEllipse(ringList.get(i), typeName+i));
 		}
 		return regions;
 	}
