@@ -71,6 +71,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.diamond.scisoft.analysis.dataset.AbstractDataset;
+import uk.ac.diamond.scisoft.analysis.diffraction.DSpacing;
 import uk.ac.diamond.scisoft.analysis.diffraction.DetectorProperties;
 import uk.ac.diamond.scisoft.analysis.diffraction.DetectorPropertyEvent;
 import uk.ac.diamond.scisoft.analysis.diffraction.DiffractionCrystalEnvironment;
@@ -411,7 +412,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		double[] beamCentre;
 		if (detprop != null && diffenv != null) {
 			beamCentre = detprop.getBeamLocation(); // detConfig.pixelCoords(detConfig.getBeamPosition());
-			EllipticalROI ellipse = Resolution.ellipseFromResolution(detprop, diffenv, ring.getResolution());
+			EllipticalROI ellipse = DSpacing.ellipseFromDSpacing(detprop, diffenv, ring.getResolution());
 			DecimalFormat df = new DecimalFormat("#.00");
 			return drawEllipse(beamCentre, ellipse, ring.getColour(), ring.getColour(), name, df.format(ring.getResolution())+"Å");
 		}
