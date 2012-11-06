@@ -6,7 +6,7 @@ Bundle-Version: 1.0.0.qualifier
 Bundle-Activator: org.dawnsci.mx.ui.Activator
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
- uk.ac.gda.libs;bundle-version="1.0.0"
+ javax.vecmath;bundle-version="1.5.2"
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Import-Package: org.dawb.common.services,
