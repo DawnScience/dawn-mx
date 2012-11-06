@@ -140,7 +140,13 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 
 	IRegion beamCentreRegion;
 
-	Action standardRings, iceRings, calibrantRings, beamCentre;
+	private Action beamCentre;
+
+	private Action standardRings;
+
+	private Action iceRings;
+
+	private Action calibrantRings;
 	
 	public MXPlotImageEditor() {
 		try {
@@ -232,43 +238,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	    MenuAction dropdown = new MenuAction("Resolution rings");
 	    dropdown.setImageDescriptor(Activator.getImageDescriptor("/icons/resolution_rings.png"));
 
-	    standardRings = new Action("Standard rings", Activator.getImageDescriptor("/icons/standard_rings.png")) {
-	    	@Override
-	    	public void run() {
-	    		drawStandardRings();
-	    	}
-		};
-		standardRings.setChecked(false);
-		iceRings = new Action("Ice rings", Activator.getImageDescriptor("/icons/ice_rings.png")) {
-			@Override
-			public void run() {
-				drawIceRings();
-			}
-		};
-		iceRings.setChecked(false);
-		calibrantRings = new Action("Calibrant", Activator.getImageDescriptor("/icons/calibrant_rings.png")) {
-			@Override
-			public void run() {
-				drawCalibrantRings();
-			}
-		};
-		calibrantRings.setChecked(false);
-		beamCentre = new Action("Beam centre", Activator.getImageDescriptor("/icons/beam_centre.png")) {
-			@Override
-			public void run() {
-				if (beamCentre.isChecked())
-					drawBeamCentre();
-				else if (beamCentreRegion != null)
-					plottingSystem.removeRegion(beamCentreRegion);
-			}
-		};
-		beamCentre.setChecked(false);
-		
-		dropdown.add(standardRings);
-		dropdown.add(iceRings);
-	    dropdown.add(calibrantRings);
-	    dropdown.add(beamCentre);
-
+	    addActions(dropdown);
 	    toolMan.add(dropdown);
 	    
 	    
@@ -299,6 +269,44 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		
 		getEditorSite().setSelectionProvider(plottingSystem.getSelectionProvider());
  	}
+
+	private void addActions(MenuAction menu) {
+	    standardRings = new Action("Standard rings", Activator.getImageDescriptor("/icons/standard_rings.png")) {
+	    	@Override
+	    	public void run() {
+	    		drawStandardRings(isChecked());
+	    	}
+		};
+		standardRings.setChecked(false);
+		menu.add(standardRings);
+		iceRings = new Action("Ice rings", Activator.getImageDescriptor("/icons/ice_rings.png")) {
+			@Override
+			public void run() {
+				drawIceRings(isChecked());
+			}
+		};
+		iceRings.setChecked(false);
+		menu.add(iceRings);
+		calibrantRings = new Action("Calibrant", Activator.getImageDescriptor("/icons/calibrant_rings.png")) {
+			@Override
+			public void run() {
+				drawCalibrantRings(isChecked());
+			}
+		};
+		calibrantRings.setChecked(false);
+		menu.add(calibrantRings);
+		beamCentre = new Action("Beam centre", Activator.getImageDescriptor("/icons/beam_centre.png")) {
+			@Override
+			public void run() {
+				if (isChecked())
+					drawBeamCentre(isChecked());
+				else if (beamCentreRegion != null)
+					plottingSystem.removeRegion(beamCentreRegion);
+			}
+		};
+		beamCentre.setChecked(false);
+		menu.add(beamCentre);
+	}
 
 	protected void removeRings(ArrayList<IRegion> regionList, ResolutionRingList resolutionRingList) {
 		for (IRegion region : regionList) {
@@ -429,11 +437,11 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		return regions;
 	}
 	
-	protected void drawStandardRings() {
+	protected void drawStandardRings(boolean isChecked) {
 		if (standardRingsRegionList != null && standardRingsList != null)
 			removeRings(standardRingsRegionList, standardRingsList); 
 
-		if (standardRings.isChecked() && diffenv!= null && detprop != null) {
+		if (isChecked && diffenv!= null && detprop != null) {
 			standardRingsList = new ResolutionRingList();
 			Double numberEvenSpacedRings = 6.0;
 			double lambda = diffenv.getWavelength();
@@ -456,11 +464,11 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		}
 	}
 
-	protected void drawIceRings() {
+	protected void drawIceRings(boolean isChecked) {
 		if (iceRingsRegionList!=null && iceRingsList!=null)
 			removeRings(iceRingsRegionList, iceRingsList);
 		
-		if (iceRings.isChecked()) {
+		if (isChecked) {
 			iceRingsList = new ResolutionRingList();
 			for (double res : iceResolution) {
 				iceRingsList.add(new ResolutionRing(res, true, ColorConstants.blue, true, false, false));
@@ -469,11 +477,11 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		}
 	}
 	
-	protected void drawBeamCentre() {
+	protected void drawBeamCentre(boolean isChecked) {
 		if (beamCentreRegion != null)
 			plottingSystem.removeRegion(beamCentreRegion);
 			
-		if (beamCentre.isChecked()) { 
+		if (isChecked) { 
 			if (detprop != null) {
 				double[] beamCentrePC = detprop.getBeamLocation();
 				double length = (1 + Math.sqrt(detprop.getPx() * detprop.getPx() + detprop.getPy() * detprop.getPy()) * 0.01);
@@ -491,12 +499,12 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		}
 	}
 
-	protected void drawCalibrantRings() {
+	protected void drawCalibrantRings(boolean isChecked) {
 		if (calibrantRingsRegionList!=null && calibrantRingsList != null) {
 			removeRings(calibrantRingsRegionList, calibrantRingsList);
 		}
 
-		if (calibrantRings.isChecked()) {
+		if (isChecked) {
 			calibrantRingsList = new ResolutionRingList();
 
 			IPreferenceStore preferenceStore = AnalysisRCPActivator.getDefault().getPreferenceStore();
@@ -597,6 +605,8 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 						diffenv = new DiffractionCrystalEnvironment(lambda, startOmega, rangeOmega, exposureTime);
 						
 						localMetaData = new DiffractionMetaDataAdapter() {
+							private static final long serialVersionUID = DiffractionMetaDataAdapter.serialVersionUID;
+
 							@Override
 							public DiffractionCrystalEnvironment getDiffractionCrystalEnvironment() {
 								return MXPlotImageEditor.this.diffenv;
@@ -610,6 +620,8 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 							@Override
 							public DiffractionMetaDataAdapter clone() {
 								return new DiffractionMetaDataAdapter() {
+									private static final long serialVersionUID = DiffractionMetaDataAdapter.serialVersionUID;
+
 									@Override
 									public DiffractionCrystalEnvironment getDiffractionCrystalEnvironment() {
 										return MXPlotImageEditor.this.diffenv.clone();
@@ -736,54 +748,29 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 
 	@Override
 	public void detectorPropertiesChanged(DetectorPropertyEvent evt) {
-		String property = evt.getPropertyName();
-		if ("Beam Center".equals(property)) {
-			drawBeamCentre();
-			drawStandardRings();
-			drawIceRings();
-			drawCalibrantRings();
-		}
-		else if ("Origin".equals(property)) {
-			drawBeamCentre();
-			drawStandardRings();
-			drawIceRings();
-			drawCalibrantRings();
-		}
-		else if ("HPxSize".equals(property)) {
-			drawBeamCentre();
-			drawStandardRings();
-			drawIceRings();
-			drawCalibrantRings();
-		}		
-		else if ("VPxSize".equals(property)) {
-			drawBeamCentre();
-			drawStandardRings();
-			drawIceRings();
-			drawCalibrantRings();
-		}		
+		beamCentre.run();
+		standardRings.run();
+		iceRings.run();
+		calibrantRings.run();
 	}
 	
 	@Override
 	public void diffractionCrystalEnvironmentChanged(DiffractionCrystalEnvironmentEvent evt) {
-		String property = evt.getPropertyName();
-		if ("Wavelength".equals(property)) {
-			drawStandardRings();
-			drawIceRings();
-			drawCalibrantRings();
-		}
+		standardRings.run();
+		iceRings.run();
+		calibrantRings.run();
 	}
 
 	@Override
 	public void diffractionMetadataCompositeChanged(DiffractionMetadataCompositeEvent evt) {
-		String property = evt.getPropertyName();
-		if ("Beam Center".equals(property)) {
+		if (evt.hasBeamCentreChanged()) {
 			if (beamCentre.isChecked()) {
 				beamCentre.setChecked(false);
 				plottingSystem.removeRegion(beamCentreRegion);
 			}
 			else {
 				beamCentre.setChecked(true);
-				drawBeamCentre();
+				drawBeamCentre(true);
 			}
 		}
 	}
