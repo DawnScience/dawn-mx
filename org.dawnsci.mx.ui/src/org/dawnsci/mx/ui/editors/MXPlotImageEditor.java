@@ -10,10 +10,6 @@
 
 package org.dawnsci.mx.ui.editors;
 
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.StringTokenizer;
-
 import javax.vecmath.Vector3d;
 
 import org.dawb.common.services.ILoaderService;
@@ -25,9 +21,6 @@ import org.dawb.common.ui.plot.AbstractPlottingSystem.ColorOption;
 import org.dawb.common.ui.plot.IPlotActionSystem;
 import org.dawb.common.ui.plot.PlotType;
 import org.dawb.common.ui.plot.PlottingFactory;
-import org.dawb.common.ui.plot.region.IRegion;
-import org.dawb.common.ui.plot.region.IRegion.RegionType;
-import org.dawb.common.ui.plot.region.RegionUtils;
 import org.dawb.common.ui.plot.tool.IToolPage.ToolPageRole;
 import org.dawb.common.ui.plot.tool.IToolPageSystem;
 import org.dawb.common.ui.plot.trace.IImageTrace;
@@ -35,12 +28,12 @@ import org.dawb.common.ui.plot.trace.ITrace;
 import org.dawb.common.ui.util.EclipseUtils;
 import org.dawb.common.ui.util.GridUtils;
 import org.dawb.common.ui.views.HeaderTablePage;
-import org.dawb.workbench.plotting.system.swtxy.selection.AbstractSelectionRegion;
+import org.dawb.workbench.plotting.tools.diffraction.DiffractionImageAugmenter;
+import org.dawnsci.mx.ui.Activator;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
-import org.eclipse.draw2d.ColorConstants;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.MenuManager;
@@ -49,7 +42,6 @@ import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.PreferenceDialog;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.FillLayout;
@@ -71,29 +63,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import uk.ac.diamond.scisoft.analysis.dataset.AbstractDataset;
-import uk.ac.diamond.scisoft.analysis.diffraction.DSpacing;
 import uk.ac.diamond.scisoft.analysis.diffraction.DetectorProperties;
-import uk.ac.diamond.scisoft.analysis.diffraction.DetectorPropertyEvent;
 import uk.ac.diamond.scisoft.analysis.diffraction.DiffractionCrystalEnvironment;
-import uk.ac.diamond.scisoft.analysis.diffraction.DiffractionCrystalEnvironmentEvent;
-import uk.ac.diamond.scisoft.analysis.diffraction.IDetectorPropertyListener;
-import uk.ac.diamond.scisoft.analysis.diffraction.IDiffractionCrystalEnvironmentListener;
-import uk.ac.diamond.scisoft.analysis.diffraction.Resolution;
 import uk.ac.diamond.scisoft.analysis.io.DiffractionMetaDataAdapter;
 import uk.ac.diamond.scisoft.analysis.io.IDiffractionMetadata;
 import uk.ac.diamond.scisoft.analysis.io.IMetaData;
 import uk.ac.diamond.scisoft.analysis.rcp.AnalysisRCPActivator;
 import uk.ac.diamond.scisoft.analysis.rcp.preference.PreferenceConstants;
-import uk.ac.diamond.scisoft.analysis.roi.EllipticalROI;
-import uk.ac.diamond.scisoft.analysis.roi.LinearROI;
-import uk.ac.diamond.scisoft.analysis.roi.ResolutionRing;
-import uk.ac.diamond.scisoft.analysis.roi.ResolutionRingList;
-import uk.ac.diamond.scisoft.analysis.roi.SectorROI;
-
-import uk.ac.diamond.sda.meta.page.DiffractionMetadataCompositeEvent;
-import uk.ac.diamond.sda.meta.page.IDiffractionMetadataCompositeListener;
-
-import org.dawnsci.mx.ui.Activator;
 
 /**
  * An editor which combines a plot with a graph of data sets.
@@ -102,15 +78,12 @@ import org.dawnsci.mx.ui.Activator;
  * editor will not show.
  * 
  */
-public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IEditorExtension, 
-	IDetectorPropertyListener, IDiffractionCrystalEnvironmentListener, IDiffractionMetadataCompositeListener {
+public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IEditorExtension {
 	
 	public static final String ID = "uk.ac.diamond.scisoft.mx.rcp.editors.mxplotimageeditor";
 
 	private static Logger logger = LoggerFactory.getLogger(MXPlotImageEditor.class);
 	
-	// This view is a composite of two other views.
-	protected AbstractPlottingSystem      plottingSystem;	
 	protected Composite                   tools;
 
 	// Colours
@@ -119,42 +92,17 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	protected int histoMax = 255;
 	protected IImageTrace imageTrace;
 	
-	protected final static double[] iceResolution = new double[] { 3.897, 3.669, 3.441, 2.671, 2.249, 2.072, 1.948,
-		1.918, 1.883, 1.721 };// angstrom
+	private AbstractPlottingSystem plottingSystem;
+	protected DiffractionImageAugmenter augmenter;
 
-	// data that is being plotted
-	protected DetectorProperties detprop;
-	protected DiffractionCrystalEnvironment diffenv;
-	
-	// Standard rings
-	ResolutionRingList standardRingsList;
-	ArrayList<IRegion> standardRingsRegionList;
-
-	// Ice rings
-	ResolutionRingList iceRingsList;
-	ArrayList<IRegion> iceRingsRegionList;
-
-	// Calibrant rings
-	ResolutionRingList calibrantRingsList;
-	ArrayList<IRegion> calibrantRingsRegionList;
-
-	IRegion beamCentreRegion;
-
-	private Action beamCentre;
-
-	private Action standardRings;
-
-	private Action iceRings;
-
-	private Action calibrantRings;
-	
 	public MXPlotImageEditor() {
 		try {
-	        this.plottingSystem = PlottingFactory.createPlottingSystem();
+			plottingSystem = PlottingFactory.createPlottingSystem();
 	        plottingSystem.setColorOption(ColorOption.NONE);
 		} catch (Exception ne) {
 			logger.error("Cannot locate any plotting systems!", ne);
 		}
+		augmenter = new DiffractionImageAugmenter(plottingSystem);
  	}
 
 	@Override
@@ -238,7 +186,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	    MenuAction dropdown = new MenuAction("Resolution rings");
 	    dropdown.setImageDescriptor(Activator.getImageDescriptor("/icons/resolution_rings.png"));
 
-	    addActions(dropdown);
+	    augmenter.addActions(dropdown);
 	    toolMan.add(dropdown);
 	    
 	    
@@ -270,270 +218,48 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		getEditorSite().setSelectionProvider(plottingSystem.getSelectionProvider());
  	}
 
-	private void addActions(MenuAction menu) {
-	    standardRings = new Action("Standard rings", Activator.getImageDescriptor("/icons/standard_rings.png")) {
-	    	@Override
-	    	public void run() {
-	    		drawStandardRings(isChecked());
-	    	}
-		};
-		standardRings.setChecked(false);
-		menu.add(standardRings);
-		iceRings = new Action("Ice rings", Activator.getImageDescriptor("/icons/ice_rings.png")) {
-			@Override
-			public void run() {
-				drawIceRings(isChecked());
-			}
-		};
-		iceRings.setChecked(false);
-		menu.add(iceRings);
-		calibrantRings = new Action("Calibrant", Activator.getImageDescriptor("/icons/calibrant_rings.png")) {
-			@Override
-			public void run() {
-				drawCalibrantRings(isChecked());
-			}
-		};
-		calibrantRings.setChecked(false);
-		menu.add(calibrantRings);
-		beamCentre = new Action("Beam centre", Activator.getImageDescriptor("/icons/beam_centre.png")) {
-			@Override
-			public void run() {
-				if (isChecked())
-					drawBeamCentre(isChecked());
-				else if (beamCentreRegion != null)
-					plottingSystem.removeRegion(beamCentreRegion);
-			}
-		};
-		beamCentre.setChecked(false);
-		menu.add(beamCentre);
-	}
-
-	protected void removeRings(ArrayList<IRegion> regionList, ResolutionRingList resolutionRingList) {
-		for (IRegion region : regionList) {
-			plottingSystem.removeRegion(region);
-		}
-		regionList.clear();
-		resolutionRingList.clear();
-	}
-	
 	/*
 	 * handle ring drawing, removal and clearing
 	 */
-	protected IRegion drawRing(double[] beamCentre, double innerRadius, double outerRadius, Color colour, Color labelColour, String nameStub, String labelText) {
-		IRegion region;
-		try {
-			final String regionName = RegionUtils.getUniqueName(nameStub, plottingSystem);
-			region = plottingSystem.createRegion(regionName, RegionType.RING);
-		} catch (Exception e) {
-			logger.error("Can't create region", e);
-			return null;
-		}
-	    final SectorROI sroi = new SectorROI(innerRadius, outerRadius);
-	    sroi.setPoint(beamCentre[0], beamCentre[1]);
-		region.setROI(sroi);
-		region.setRegionColor(colour);
-		region.setAlpha(100);
-		region.setUserRegion(false);
-		region.setMobile(false);
-		
-		region.setLabel(labelText);
-		((AbstractSelectionRegion)region).setShowLabel(true);
-		((AbstractSelectionRegion)region).setForegroundColor(labelColour);
-		
-		region.setShowPosition(false);
-		plottingSystem.addRegion(region);
-		
-		return region;
-	}
+//	protected IRegion drawRing(double[] beamCentre, double innerRadius, double outerRadius, Color colour, Color labelColour, String nameStub, String labelText) {
+//		IRegion region;
+//		try {
+//			final String regionName = RegionUtils.getUniqueName(nameStub, plottingSystem);
+//			region = plottingSystem.createRegion(regionName, RegionType.RING);
+//		} catch (Exception e) {
+//			logger.error("Can't create region", e);
+//			return null;
+//		}
+//	    final SectorROI sroi = new SectorROI(innerRadius, outerRadius);
+//	    sroi.setPoint(beamCentre[0], beamCentre[1]);
+//		region.setROI(sroi);
+//		region.setRegionColor(colour);
+//		region.setAlpha(100);
+//		region.setUserRegion(false);
+//		region.setMobile(false);
+//		
+//		region.setLabel(labelText);
+//		((AbstractSelectionRegion)region).setShowLabel(true);
+//		((AbstractSelectionRegion)region).setForegroundColor(labelColour);
+//		
+//		region.setShowPosition(false);
+//		plottingSystem.addRegion(region);
+//		
+//		return region;
+//	}
 	
-	/*
-	 * handle ring drawing, removal and clearing
-	 */
-	protected IRegion drawEllipse(double[] beamCentre, EllipticalROI eroi, Color colour, Color labelColour, String nameStub, String labelText) {
-		IRegion region;
-		try {
-			final String regionName = RegionUtils.getUniqueName(nameStub, plottingSystem);
-			region = plottingSystem.createRegion(regionName, RegionType.ELLIPSE);
-		} catch (Exception e) {
-			logger.error("Can't create region", e);
-			return null;
-		}
-		region.setROI(eroi);
-		region.setRegionColor(colour);
-		region.setAlpha(100);
-		region.setUserRegion(false);
-		region.setMobile(false);
-		
-		region.setLabel(labelText);
-		((AbstractSelectionRegion)region).setShowLabel(true);
-		((AbstractSelectionRegion)region).setForegroundColor(labelColour);
-		
-		region.setShowPosition(false);
-		plottingSystem.addRegion(region);
-		
-		return region;
-	}
-
-	protected IRegion drawCrosshairs(double[] beamCentre, double length, Color colour, Color labelColour, String nameStub, String labelText) {
-		IRegion region;
-		try {
-			final String regionName = RegionUtils.getUniqueName(nameStub, plottingSystem);
-			region = plottingSystem.createRegion(regionName, RegionType.LINE);
-		} catch (Exception e) {
-			logger.error("Can't create region", e);
-			return null;
-		}
-
-		final LinearROI lroi = new LinearROI(length, 0);
-		double dbc[] = {(double)beamCentre[0], (double)beamCentre[1]};
-		lroi.setMidPoint(dbc);
-		lroi.setCrossHair(true);
-		region.setROI(lroi);
-		region.setRegionColor(colour);
-		region.setAlpha(100);
-		region.setUserRegion(false);
-		region.setShowPosition(false);
-		
-		region.setLabel(labelText);
-		((AbstractSelectionRegion)region).setShowLabel(true);
-		
-		plottingSystem.addRegion(region);
-		region.setMobile(false); // NOTE: Must be done **AFTER** calling the addRegion method.
-
-		return region;
-	}
 	
-	protected IRegion drawResolutionRing(ResolutionRing ring, String name) {
-		double[] beamCentre;
-		double radius;
-		if (detprop != null && diffenv != null) {
-			beamCentre = detprop.getBeamLocation(); // detConfig.pixelCoords(detConfig.getBeamPosition());
-			radius = Resolution.circularResolutionRingRadius(detprop, diffenv, ring.getResolution());
-			DecimalFormat df = new DecimalFormat("#.00");
-			return drawRing(beamCentre, radius, radius+4.0, ring.getColour(), ring.getColour(), name, df.format(ring.getResolution())+"Å");
-		}
-		else
-			return null;
-	}
-	
-	protected IRegion drawResolutionEllipse(ResolutionRing ring, String name) {
-		double[] beamCentre;
-		if (detprop != null && diffenv != null) {
-			beamCentre = detprop.getBeamLocation(); // detConfig.pixelCoords(detConfig.getBeamPosition());
-			EllipticalROI ellipse = DSpacing.ellipseFromDSpacing(detprop, diffenv, ring.getResolution());
-			DecimalFormat df = new DecimalFormat("#.00");
-			return drawEllipse(beamCentre, ellipse, ring.getColour(), ring.getColour(), name, df.format(ring.getResolution())+"Å");
-		}
-		else
-			return null;
-	}
 
-	protected ArrayList<IRegion> drawResolutionRings(ResolutionRingList ringList, String typeName) {
-		ArrayList<IRegion> regions = new ArrayList<IRegion>(); 
-		for (int i = 0; i < ringList.size(); i++) {
-//			regions.add(drawResolutionRing(ringList.get(i), typeName+i));
-			regions.add(drawResolutionEllipse(ringList.get(i), typeName+i));
-		}
-		return regions;
-	}
-	
-	protected void drawStandardRings(boolean isChecked) {
-		if (standardRingsRegionList != null && standardRingsList != null)
-			removeRings(standardRingsRegionList, standardRingsList); 
-
-		if (isChecked && diffenv!= null && detprop != null) {
-			standardRingsList = new ResolutionRingList();
-			Double numberEvenSpacedRings = 6.0;
-			double lambda = diffenv.getWavelength();
-			Vector3d longestVector = detprop.getLongestVector();
-			double step = longestVector.length() / numberEvenSpacedRings; 
-			double d, twoThetaSpacing;
-			Vector3d toDetectorVector = new Vector3d();
-			Vector3d beamVector = detprop.getBeamPosition();
-			for (int i = 0; i < numberEvenSpacedRings - 1; i++) {
-				// increase the length of the vector by step.
-				longestVector.normalize();
-				longestVector.scale(step + (step * i));
-	
-				toDetectorVector.add(beamVector, longestVector);
-				twoThetaSpacing = beamVector.angle(toDetectorVector);
-				d = lambda / Math.sin(twoThetaSpacing);
-				standardRingsList.add(new ResolutionRing(d, true, ColorConstants.yellow, false, true, true));
-			}
-			standardRingsRegionList = drawResolutionRings(standardRingsList, "standard");
-		}
-	}
-
-	protected void drawIceRings(boolean isChecked) {
-		if (iceRingsRegionList!=null && iceRingsList!=null)
-			removeRings(iceRingsRegionList, iceRingsList);
-		
-		if (isChecked) {
-			iceRingsList = new ResolutionRingList();
-			for (double res : iceResolution) {
-				iceRingsList.add(new ResolutionRing(res, true, ColorConstants.blue, true, false, false));
-			}
-			iceRingsRegionList = drawResolutionRings(iceRingsList, "ice");
-		}
-	}
-	
-	protected void drawBeamCentre(boolean isChecked) {
-		if (beamCentreRegion != null)
-			plottingSystem.removeRegion(beamCentreRegion);
-			
-		if (isChecked) { 
-			if (detprop != null) {
-				double[] beamCentrePC = detprop.getBeamLocation();
-				double length = (1 + Math.sqrt(detprop.getPx() * detprop.getPx() + detprop.getPy() * detprop.getPy()) * 0.01);
-				DecimalFormat df = new DecimalFormat("#.##");
-				String label = df.format(beamCentrePC[0]) + "px, " + df.format(beamCentrePC[1])+"px";
-				beamCentreRegion = drawCrosshairs(beamCentrePC, length, ColorConstants.red, ColorConstants.black, "beam centre", label);
-			}
-			else {
-				final AbstractDataset image = imageTrace.getData();
-				double[] beamCentrePC = new double[]{image.getShape()[1]/2d, image.getShape()[0]/2d};
-				DecimalFormat df = new DecimalFormat("#.##");
-				String label = df.format(beamCentrePC[0]) + "px, " + df.format(beamCentrePC[1])+"px";
-				beamCentreRegion = drawCrosshairs(beamCentrePC, image.getShape()[1]/100, ColorConstants.red, ColorConstants.black, "beam centre", label);
-			}
-		}
-	}
-
-	protected void drawCalibrantRings(boolean isChecked) {
-		if (calibrantRingsRegionList!=null && calibrantRingsList != null) {
-			removeRings(calibrantRingsRegionList, calibrantRingsList);
-		}
-
-		if (isChecked) {
-			calibrantRingsList = new ResolutionRingList();
-
-			IPreferenceStore preferenceStore = AnalysisRCPActivator.getDefault().getPreferenceStore();
-			@SuppressWarnings("unused")
-			String standardName;
-			if (preferenceStore.isDefault(PreferenceConstants.DIFFRACTION_VIEWER_STANDARD_NAME))
-				standardName = preferenceStore.getDefaultString(PreferenceConstants.DIFFRACTION_VIEWER_STANDARD_NAME);
-			else
-				standardName = preferenceStore.getString(PreferenceConstants.DIFFRACTION_VIEWER_STANDARD_NAME);
-
-			String standardDistances;
-			if (preferenceStore.isDefault(PreferenceConstants.DIFFRACTION_VIEWER_STANDARD_DISTANCES))
-				standardDistances = preferenceStore
-				.getDefaultString(PreferenceConstants.DIFFRACTION_VIEWER_STANDARD_DISTANCES);
-			else
-				standardDistances = preferenceStore.getString(PreferenceConstants.DIFFRACTION_VIEWER_STANDARD_DISTANCES);
-
-			ArrayList<Double> dSpacing = new ArrayList<Double>();
-			StringTokenizer st = new StringTokenizer(standardDistances, ",");
-			while (st.hasMoreTokens()) {
-				String temp = st.nextToken();
-				dSpacing.add(Double.valueOf(temp));
-			}
-			for (double d : dSpacing) {
-				calibrantRingsList.add(new ResolutionRing(d, true, ColorConstants.red, true, false, false));
-			}
-			calibrantRingsRegionList = drawResolutionRings(calibrantRingsList, "calibrant");
-		}
-	}
+//	protected IRegion drawResolutionRing(ResolutionRing ring, String name) {
+//		if (detprop != null && diffenv != null) {
+//			double[] beamCentre = detprop.getBeamLocation(); // detConfig.pixelCoords(detConfig.getBeamPosition());
+//			double radius = Resolution.circularResolutionRingRadius(detprop, diffenv, ring.getResolution());
+//			DecimalFormat df = new DecimalFormat("#.00");
+//			return drawRing(beamCentre, radius, radius+4.0, ring.getColour(), ring.getColour(), name, df.format(ring.getResolution())+"Å");
+//		}
+//		else
+//			return null;
+//	}
 	
 	private void createPlot() {
 		
@@ -567,19 +293,15 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 				
 				try {
 					IMetaData localMetaData = set.getMetadata();
+					// Get image size in x and y directions
+					int[] shape = set.getShape();
+					int heightInPixels = shape[0];
+					int widthInPixels = shape[1];
+
 					if (localMetaData instanceof IDiffractionMetadata) {
 						IDiffractionMetadata localDiffractionMetaData = (IDiffractionMetadata)localMetaData;
-						detprop = localDiffractionMetaData.getDetector2DProperties();
-						diffenv = localDiffractionMetaData.getDiffractionCrystalEnvironment();
-						
-					}
-					else {
-						
-						// Get image size in x and y directions
-						int[] shape = set.getShape();
-						int heightInPixels = shape[0];
-						int widthInPixels = shape[1];
-						
+						augmenter.setDiffractionMetadata(localDiffractionMetaData);
+					} else {
 						// Set a few default values
 						double pixelSizeX = 0.1024;
 						double pixelSizeY = 0.1024;
@@ -593,7 +315,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 						double detectorRotationY = 0.0; 
 						double detectorRotationZ = 0.0; 
 
-						detprop = new DetectorProperties(new Vector3d(detectorOrigin), heightInPixels, widthInPixels, 
+						final DetectorProperties detprop = new DetectorProperties(new Vector3d(detectorOrigin), heightInPixels, widthInPixels, 
 								pixelSizeX, pixelSizeY, detectorRotationX, detectorRotationY, detectorRotationZ);
 						
 						// Set a few default values
@@ -602,19 +324,19 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 						double rangeOmega = 1.0;
 						double exposureTime = 1.0;
 						
-						diffenv = new DiffractionCrystalEnvironment(lambda, startOmega, rangeOmega, exposureTime);
+						final DiffractionCrystalEnvironment diffenv = new DiffractionCrystalEnvironment(lambda, startOmega, rangeOmega, exposureTime);
 						
 						localMetaData = new DiffractionMetaDataAdapter() {
 							private static final long serialVersionUID = DiffractionMetaDataAdapter.serialVersionUID;
 
 							@Override
 							public DiffractionCrystalEnvironment getDiffractionCrystalEnvironment() {
-								return MXPlotImageEditor.this.diffenv;
+								return diffenv;
 							}
 
 							@Override
 							public DetectorProperties getDetector2DProperties() {
-								return MXPlotImageEditor.this.detprop;
+								return detprop;
 							}
 
 							@Override
@@ -624,22 +346,21 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 
 									@Override
 									public DiffractionCrystalEnvironment getDiffractionCrystalEnvironment() {
-										return MXPlotImageEditor.this.diffenv.clone();
+										return diffenv.clone();
 									}
 
 									@Override
 									public DetectorProperties getDetector2DProperties() {
-										return MXPlotImageEditor.this.detprop.clone();
+										return detprop.clone();
 									}
 								};
 							}
 						};
 						
+						augmenter.setDiffractionMetadata((IDiffractionMetadata) localMetaData);
 						set.setMetadata(localMetaData);
 					}
-					// TODO Listen to properties changing
-					detprop.addDetectorPropertyListener(MXPlotImageEditor.this);
-					diffenv.addDiffractionCrystalEnvironmentListener(MXPlotImageEditor.this);
+					augmenter.setImageCentre(widthInPixels/2.,heightInPixels/2.);
 				} catch (Exception e) {
 					logger.error("Could not create diffraction experiment objects");
 				}
@@ -697,15 +418,9 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 
     @Override
     public void dispose() {
+    	augmenter.dispose();
      	if (plottingSystem!=null) plottingSystem.dispose();
      	super.dispose();
-     	
-     	if (detprop != null)
-     		detprop.removeDetectorPropertyListener(MXPlotImageEditor.this);
-
-     	if (diffenv != null)
-     		diffenv.removeDiffractionCrystalEnvironmentListener(MXPlotImageEditor.this);
-     	
     }
 
     @Override
@@ -721,7 +436,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	}
     
     public AbstractPlottingSystem getPlottingSystem() {
-    	return this.plottingSystem;
+    	return plottingSystem;
     }
 
 	@Override
@@ -745,35 +460,5 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 
 		return false;
 	}
-
-	@Override
-	public void detectorPropertiesChanged(DetectorPropertyEvent evt) {
-		beamCentre.run();
-		standardRings.run();
-		iceRings.run();
-		calibrantRings.run();
-	}
-	
-	@Override
-	public void diffractionCrystalEnvironmentChanged(DiffractionCrystalEnvironmentEvent evt) {
-		standardRings.run();
-		iceRings.run();
-		calibrantRings.run();
-	}
-
-	@Override
-	public void diffractionMetadataCompositeChanged(DiffractionMetadataCompositeEvent evt) {
-		if (evt.hasBeamCentreChanged()) {
-			if (beamCentre.isChecked()) {
-				beamCentre.setChecked(false);
-				plottingSystem.removeRegion(beamCentreRegion);
-			}
-			else {
-				beamCentre.setChecked(true);
-				drawBeamCentre(true);
-			}
-		}
-	}
-
 
 }
