@@ -118,7 +118,6 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	public void setInput(final IEditorInput input) {
 		super.setInput(input);
 		setPartName("MX image"); //input.getName()
-		createPlot();
 	}
 
 
@@ -178,6 +177,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		plot.setLayout(new FillLayout());
 
         plottingSystem.createPlotPart(plot, plotName, null, PlotType.IMAGE, this);
+		createPlot();
         IPlotActionSystem actionsys = plottingSystem.getPlotActionSystem();
         actionsys.fillZoomActions(toolMan);
         actionsys.fillRegionActions(toolMan);
@@ -213,54 +213,10 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	    
 		if (toolMan!=null)  toolMan.update(true);
 		if (rightMan!=null) rightMan.update(true);
-		//createPlot();
 		
 		getEditorSite().setSelectionProvider(plottingSystem.getSelectionProvider());
  	}
 
-	/*
-	 * handle ring drawing, removal and clearing
-	 */
-//	protected IRegion drawRing(double[] beamCentre, double innerRadius, double outerRadius, Color colour, Color labelColour, String nameStub, String labelText) {
-//		IRegion region;
-//		try {
-//			final String regionName = RegionUtils.getUniqueName(nameStub, plottingSystem);
-//			region = plottingSystem.createRegion(regionName, RegionType.RING);
-//		} catch (Exception e) {
-//			logger.error("Can't create region", e);
-//			return null;
-//		}
-//	    final SectorROI sroi = new SectorROI(innerRadius, outerRadius);
-//	    sroi.setPoint(beamCentre[0], beamCentre[1]);
-//		region.setROI(sroi);
-//		region.setRegionColor(colour);
-//		region.setAlpha(100);
-//		region.setUserRegion(false);
-//		region.setMobile(false);
-//		
-//		region.setLabel(labelText);
-//		((AbstractSelectionRegion)region).setShowLabel(true);
-//		((AbstractSelectionRegion)region).setForegroundColor(labelColour);
-//		
-//		region.setShowPosition(false);
-//		plottingSystem.addRegion(region);
-//		
-//		return region;
-//	}
-	
-	
-
-//	protected IRegion drawResolutionRing(ResolutionRing ring, String name) {
-//		if (detprop != null && diffenv != null) {
-//			double[] beamCentre = detprop.getBeamLocation(); // detConfig.pixelCoords(detConfig.getBeamPosition());
-//			double radius = Resolution.circularResolutionRingRadius(detprop, diffenv, ring.getResolution());
-//			DecimalFormat df = new DecimalFormat("#.00");
-//			return drawRing(beamCentre, radius, radius+4.0, ring.getColour(), ring.getColour(), name, df.format(ring.getResolution())+"Å");
-//		}
-//		else
-//			return null;
-//	}
-	
 	private void createPlot() {
 		
 		final Job job = new Job("Read image data") {
