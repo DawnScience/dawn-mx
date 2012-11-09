@@ -95,6 +95,9 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	private AbstractPlottingSystem plottingSystem;
 	protected DiffractionImageAugmenter augmenter;
 
+	private DetectorProperties detectorProperties;
+	private DiffractionCrystalEnvironment diffractionCrystalEnvironment;
+
 	public MXPlotImageEditor() {
 		try {
 			plottingSystem = PlottingFactory.createPlottingSystem();
@@ -217,6 +220,42 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		getEditorSite().setSelectionProvider(plottingSystem.getSelectionProvider());
  	}
 
+	private class MXMetadataAdapter extends DiffractionMetaDataAdapter {
+		private static final long serialVersionUID = DiffractionMetaDataAdapter.serialVersionUID;
+		private final DetectorProperties props;
+		private final DiffractionCrystalEnvironment env;
+
+		public MXMetadataAdapter(DetectorProperties props, DiffractionCrystalEnvironment env) {
+			this.props = props;
+			this.env = env;
+		}
+
+		@Override
+		public DetectorProperties getDetector2DProperties() {
+			return props;
+		}
+
+		@Override
+		public DiffractionCrystalEnvironment getDiffractionCrystalEnvironment() {
+			return env;
+		}
+
+		@Override
+		public DetectorProperties getOriginalDetector2DProperties() {
+			return detectorProperties;
+		}
+
+		@Override
+		public DiffractionCrystalEnvironment getOriginalDiffractionCrystalEnvironment() {
+			return diffractionCrystalEnvironment;
+		}
+
+		@Override
+		public MXMetadataAdapter clone() {
+			return new MXMetadataAdapter(props.clone(), env.clone());
+		}
+	}
+
 	private void createPlot() {
 		
 		final Job job = new Job("Read image data") {
@@ -271,7 +310,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 						double detectorRotationY = 0.0; 
 						double detectorRotationZ = 0.0; 
 
-						final DetectorProperties detprop = new DetectorProperties(new Vector3d(detectorOrigin), heightInPixels, widthInPixels, 
+						detectorProperties = new DetectorProperties(new Vector3d(detectorOrigin), heightInPixels, widthInPixels, 
 								pixelSizeX, pixelSizeY, detectorRotationX, detectorRotationY, detectorRotationZ);
 						
 						// Set a few default values
@@ -280,38 +319,9 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 						double rangeOmega = 1.0;
 						double exposureTime = 1.0;
 						
-						final DiffractionCrystalEnvironment diffenv = new DiffractionCrystalEnvironment(lambda, startOmega, rangeOmega, exposureTime);
+						diffractionCrystalEnvironment = new DiffractionCrystalEnvironment(lambda, startOmega, rangeOmega, exposureTime);
 						
-						localMetaData = new DiffractionMetaDataAdapter() {
-							private static final long serialVersionUID = DiffractionMetaDataAdapter.serialVersionUID;
-
-							@Override
-							public DiffractionCrystalEnvironment getDiffractionCrystalEnvironment() {
-								return diffenv;
-							}
-
-							@Override
-							public DetectorProperties getDetector2DProperties() {
-								return detprop;
-							}
-
-							@Override
-							public DiffractionMetaDataAdapter clone() {
-								return new DiffractionMetaDataAdapter() {
-									private static final long serialVersionUID = DiffractionMetaDataAdapter.serialVersionUID;
-
-									@Override
-									public DiffractionCrystalEnvironment getDiffractionCrystalEnvironment() {
-										return diffenv.clone();
-									}
-
-									@Override
-									public DetectorProperties getDetector2DProperties() {
-										return detprop.clone();
-									}
-								};
-							}
-						};
+						localMetaData = new MXMetadataAdapter(detectorProperties.clone(), diffractionCrystalEnvironment.clone());
 						
 						augmenter.setDiffractionMetadata((IDiffractionMetadata) localMetaData);
 						set.setMetadata(localMetaData);
