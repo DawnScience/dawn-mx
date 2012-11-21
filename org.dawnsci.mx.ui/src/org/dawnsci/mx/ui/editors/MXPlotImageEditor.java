@@ -305,13 +305,8 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 						// Create the detector origin vector based on the above
 						double[] detectorOrigin = { (widthInPixels - widthInPixels/2d) * pixelSizeX, (heightInPixels - heightInPixels/2d) * pixelSizeY, distance };
 						
-						// The rotation of the detector relative to the reference frame - assume no rotation
-						double detectorRotationX = 0.0; 
-						double detectorRotationY = 0.0; 
-						double detectorRotationZ = 0.0; 
-
 						detectorProperties = new DetectorProperties(new Vector3d(detectorOrigin), heightInPixels, widthInPixels, 
-								pixelSizeX, pixelSizeY, detectorRotationX, detectorRotationY, detectorRotationZ);
+								pixelSizeX, pixelSizeY, null);
 						
 						// Set a few default values
 						double lambda = 0.9;
