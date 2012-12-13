@@ -43,7 +43,6 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.PreferenceDialog;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.PaletteData;
-import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -72,10 +71,7 @@ import uk.ac.diamond.scisoft.analysis.rcp.AnalysisRCPActivator;
 import uk.ac.diamond.scisoft.analysis.rcp.preference.PreferenceConstants;
 
 /**
- * An editor which combines a plot with a graph of data sets.
- * 
- * Currently this is for 1D analyses only so if the data does not contain 1D, this
- * editor will not show.
+ * An editor with an image and a reduced set of tools relevant for MX.
  * 
  */
 public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IEditorExtension {
@@ -113,14 +109,15 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		
 		setSite(site);
 		setInput(input);
-		//setPartName("MX image"); // input.getName()	
+		//setPartName("MX image"); // input.getName()
 	}
 	
 	
 	@Override
 	public void setInput(final IEditorInput input) {
 		super.setInput(input);
-		setPartName("MX image"); //input.getName()
+		setPartName("MX image"); 
+		//createPlot();
 	}
 
 
@@ -273,57 +270,53 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 					return Status.CANCEL_STATUS;
 				}
 
-				set.setName(""); // Stack trace if null - stupid.
-				ITrace trace = plottingSystem.updatePlot2D(set, null, monitor);
-				
-				// Set the palette to negative gray scale ("film negative")
-				if (trace instanceof IImageTrace) {
-					imageTrace = (IImageTrace) trace;
-					paletteData = imageTrace.getPaletteData();
-					paletteData.colors = new RGB[256];
-					for (int i = 0; i < 256; i++) {
-						paletteData.colors[i] = new RGB(255-i, 255-i, 255-i);
-					}
+				if (filePath == null)
+					logger.error("Cannot get either file path or dataset");
+				else if (set == null) {
+					logger.error("Cannot get dataset for file "+filePath);
 				}
-				
-				try {
-					IMetaData localMetaData = set.getMetadata();
-					// Get image size in x and y directions
-					int[] shape = set.getShape();
-					int heightInPixels = shape[0];
-					int widthInPixels = shape[1];
+				else {
+					set.setName(""); // Stack trace if null - stupid.
+					ITrace trace = plottingSystem.updatePlot2D(set, null, monitor);
+					try {
+						IMetaData localMetaData = set.getMetadata();
+						// Get image size in x and y directions
+						int[] shape = set.getShape();
+						int heightInPixels = shape[0];
+						int widthInPixels = shape[1];
 
-					if (localMetaData instanceof IDiffractionMetadata) {
-						IDiffractionMetadata localDiffractionMetaData = (IDiffractionMetadata)localMetaData;
-						augmenter.setDiffractionMetadata(localDiffractionMetaData);
-					} else {
-						// Set a few default values
-						double pixelSizeX = 0.1024;
-						double pixelSizeY = 0.1024;
-						double distance = 200.00;
+						if (localMetaData instanceof IDiffractionMetadata) {
+							IDiffractionMetadata localDiffractionMetaData = (IDiffractionMetadata)localMetaData;
+							augmenter.setDiffractionMetadata(localDiffractionMetaData);
+						} else {
+							// Set a few default values
+							double pixelSizeX = 0.1024;
+							double pixelSizeY = 0.1024;
+							double distance = 200.00;
 
-						// Create the detector origin vector based on the above
-						double[] detectorOrigin = { (widthInPixels - widthInPixels/2d) * pixelSizeX, (heightInPixels - heightInPixels/2d) * pixelSizeY, distance };
-						
-						detectorProperties = new DetectorProperties(new Vector3d(detectorOrigin), heightInPixels, widthInPixels, 
-								pixelSizeX, pixelSizeY, null);
-						
-						// Set a few default values
-						double lambda = 0.9;
-						double startOmega = 0.0;
-						double rangeOmega = 1.0;
-						double exposureTime = 1.0;
-						
-						diffractionCrystalEnvironment = new DiffractionCrystalEnvironment(lambda, startOmega, rangeOmega, exposureTime);
-						
-						localMetaData = new MXMetadataAdapter(detectorProperties.clone(), diffractionCrystalEnvironment.clone());
-						
-						augmenter.setDiffractionMetadata((IDiffractionMetadata) localMetaData);
-						set.setMetadata(localMetaData);
+							// Create the detector origin vector based on the above
+							double[] detectorOrigin = { (widthInPixels - widthInPixels/2d) * pixelSizeX, (heightInPixels - heightInPixels/2d) * pixelSizeY, distance };
+
+							detectorProperties = new DetectorProperties(new Vector3d(detectorOrigin), heightInPixels, widthInPixels, 
+									pixelSizeX, pixelSizeY, null);
+
+							// Set a few default values
+							double lambda = 0.9;
+							double startOmega = 0.0;
+							double rangeOmega = 1.0;
+							double exposureTime = 1.0;
+
+							diffractionCrystalEnvironment = new DiffractionCrystalEnvironment(lambda, startOmega, rangeOmega, exposureTime);
+
+							localMetaData = new MXMetadataAdapter(detectorProperties.clone(), diffractionCrystalEnvironment.clone());
+
+							augmenter.setDiffractionMetadata((IDiffractionMetadata) localMetaData);
+							set.setMetadata(localMetaData);
+						}
+						augmenter.setImageCentre(widthInPixels/2.,heightInPixels/2.);
+					} catch (Exception e) {
+						logger.error("Could not create diffraction experiment objects");
 					}
-					augmenter.setImageCentre(widthInPixels/2.,heightInPixels/2.);
-				} catch (Exception e) {
-					logger.error("Could not create diffraction experiment objects");
 				}
 				return Status.OK_STATUS;
 			}
