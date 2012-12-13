@@ -276,7 +276,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 					logger.error("Cannot get dataset for file "+filePath);
 				}
 				else {
-					set.setName(""); // Stack trace if null - stupid.
+					set.setName(""); // Stack trace if null
 					ITrace trace = plottingSystem.updatePlot2D(set, null, monitor);
 					try {
 						IMetaData localMetaData = set.getMetadata();
