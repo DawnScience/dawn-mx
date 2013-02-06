@@ -28,7 +28,7 @@ import org.dawb.common.ui.plot.trace.ITrace;
 import org.dawb.common.ui.util.EclipseUtils;
 import org.dawb.common.ui.util.GridUtils;
 import org.dawb.common.ui.views.HeaderTablePage;
-import org.dawb.workbench.plotting.tools.diffraction.DiffractionImageAugmenter;
+import org.dawnsci.plotting.tools.diffraction.DiffractionImageAugmenter;
 import org.dawnsci.mx.ui.Activator;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
