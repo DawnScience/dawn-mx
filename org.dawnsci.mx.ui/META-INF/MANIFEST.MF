@@ -8,7 +8,10 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
  javax.vecmath;bundle-version="1.5.2",
  org.dawnsci.plotting.api;bundle-version="1.0.0",
- org.dawb.common.ui;bundle-version="1.3.0"
+ org.dawb.common.ui;bundle-version="1.3.0",
+ uk.ac.diamond.scisoft.analysis;bundle-version="1.3.0",
+ uk.ac.diamond.scisoft.analysis.api;bundle-version="1.0.0",
+ uk.ac.diamond.scisoft.analysis.rcp;bundle-version="1.3.0"
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Import-Package: org.dawb.common.services,
@@ -16,10 +19,4 @@ Import-Package: org.dawb.common.services,
  org.dawnsci.plotting.tools.diffraction,
  org.eclipse.draw2d,
  org.slf4j;version="1.5.6",
- uk.ac.diamond.scisoft.analysis.dataset,
- uk.ac.diamond.scisoft.analysis.diffraction,
- uk.ac.diamond.scisoft.analysis.io,
- uk.ac.diamond.scisoft.analysis.rcp,
- uk.ac.diamond.scisoft.analysis.rcp.preference,
- uk.ac.diamond.scisoft.analysis.roi,
  uk.ac.diamond.sda.meta.page
