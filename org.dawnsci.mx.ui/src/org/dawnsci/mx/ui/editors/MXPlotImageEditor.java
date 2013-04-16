@@ -97,11 +97,11 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	public MXPlotImageEditor() {
 		try {
 			plottingSystem = PlottingFactory.createPlottingSystem();
-	        plottingSystem.setColorOption(ColorOption.NONE);
+	        getPlottingSystem().setColorOption(ColorOption.NONE);
 		} catch (Exception ne) {
 			logger.error("Cannot locate any plotting systems!", ne);
 		}
-		augmenter = new DiffractionImageAugmenter(plottingSystem);
+		augmenter = new DiffractionImageAugmenter(getPlottingSystem());
  	}
 
 	@Override
@@ -176,9 +176,9 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		plot.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 		plot.setLayout(new FillLayout());
 
-        plottingSystem.createPlotPart(plot, plotName, null, PlotType.IMAGE, this);
+        getPlottingSystem().createPlotPart(plot, plotName, null, PlotType.IMAGE, this);
 		createPlot();
-        IPlotActionSystem actionsys = plottingSystem.getPlotActionSystem();
+        IPlotActionSystem actionsys = getPlottingSystem().getPlotActionSystem();
         actionsys.fillZoomActions(toolMan);
         actionsys.fillRegionActions(toolMan);
         actionsys.fillToolActions(toolMan, ToolPageRole.ROLE_2D);
@@ -214,7 +214,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		if (toolMan!=null)  toolMan.update(true);
 		if (rightMan!=null) rightMan.update(true);
 		
-		getEditorSite().setSelectionProvider(plottingSystem.getSelectionProvider());
+		getEditorSite().setSelectionProvider(getPlottingSystem().getSelectionProvider());
  	}
 
 	private class MXMetadataAdapter extends DiffractionMetaDataAdapter {
@@ -253,6 +253,49 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		}
 	}
 
+	protected void processMetadata(AbstractDataset set) {
+		try {
+			IMetaData localMetaData = set.getMetadata();
+			// Get image size in x and y directions
+			int[] shape = set.getShape();
+			int heightInPixels = shape[0];
+			int widthInPixels = shape[1];
+
+			if (localMetaData instanceof IDiffractionMetadata) {
+				IDiffractionMetadata localDiffractionMetaData = (IDiffractionMetadata)localMetaData;
+				augmenter.setDiffractionMetadata(localDiffractionMetaData);
+			} else {
+				// Set a few default values
+				double pixelSizeX = 0.1024;
+				double pixelSizeY = 0.1024;
+				double distance = 200.00;
+
+				// Create the detector origin vector based on the above
+				double[] detectorOrigin = { (widthInPixels - widthInPixels/2d) * pixelSizeX, (heightInPixels - heightInPixels/2d) * pixelSizeY, distance };
+
+				detectorProperties = new DetectorProperties(new Vector3d(detectorOrigin), heightInPixels, widthInPixels, 
+						pixelSizeX, pixelSizeY, null);
+
+				// Set a few default values
+				double lambda = 0.9;
+				double startOmega = 0.0;
+				double rangeOmega = 1.0;
+				double exposureTime = 1.0;
+
+				diffractionCrystalEnvironment = new DiffractionCrystalEnvironment(lambda, startOmega, rangeOmega, exposureTime);
+
+				localMetaData = new MXMetadataAdapter(detectorProperties.clone(), diffractionCrystalEnvironment.clone());
+
+				augmenter.setDiffractionMetadata((IDiffractionMetadata) localMetaData);
+				set.setMetadata(localMetaData);
+			}
+			augmenter.setImageCentre(widthInPixels/2.,heightInPixels/2.);
+		} catch (Exception e) {
+			e.printStackTrace();
+			logger.error("Could not create diffraction experiment objects");
+		}
+	}
+
 	private void createPlot() {
 		
 		final Job job = new Job("Read image data") {
@@ -277,46 +320,8 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 				}
 				else {
 					set.setName(""); // Stack trace if null
-					ITrace trace = plottingSystem.updatePlot2D(set, null, monitor);
-					try {
-						IMetaData localMetaData = set.getMetadata();
-						// Get image size in x and y directions
-						int[] shape = set.getShape();
-						int heightInPixels = shape[0];
-						int widthInPixels = shape[1];
-
-						if (localMetaData instanceof IDiffractionMetadata) {
-							IDiffractionMetadata localDiffractionMetaData = (IDiffractionMetadata)localMetaData;
-							augmenter.setDiffractionMetadata(localDiffractionMetaData);
-						} else {
-							// Set a few default values
-							double pixelSizeX = 0.1024;
-							double pixelSizeY = 0.1024;
-							double distance = 200.00;
-
-							// Create the detector origin vector based on the above
-							double[] detectorOrigin = { (widthInPixels - widthInPixels/2d) * pixelSizeX, (heightInPixels - heightInPixels/2d) * pixelSizeY, distance };
-
-							detectorProperties = new DetectorProperties(new Vector3d(detectorOrigin), heightInPixels, widthInPixels, 
-									pixelSizeX, pixelSizeY, null);
-
-							// Set a few default values
-							double lambda = 0.9;
-							double startOmega = 0.0;
-							double rangeOmega = 1.0;
-							double exposureTime = 1.0;
-
-							diffractionCrystalEnvironment = new DiffractionCrystalEnvironment(lambda, startOmega, rangeOmega, exposureTime);
-
-							localMetaData = new MXMetadataAdapter(detectorProperties.clone(), diffractionCrystalEnvironment.clone());
-
-							augmenter.setDiffractionMetadata((IDiffractionMetadata) localMetaData);
-							set.setMetadata(localMetaData);
-						}
-						augmenter.setImageCentre(widthInPixels/2.,heightInPixels/2.);
-					} catch (Exception e) {
-						logger.error("Could not create diffraction experiment objects");
-					}
+					ITrace trace = getPlottingSystem().updatePlot2D(set, null, monitor);
+					processMetadata(set);
 				}
 				return Status.OK_STATUS;
 			}
@@ -350,8 +355,8 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 
 	@Override
 	public void setFocus() {
-		if (plottingSystem!=null && plottingSystem.getPlotComposite()!=null) {
-			plottingSystem.setFocus();
+		if (getPlottingSystem()!=null && getPlottingSystem().getPlotComposite()!=null) {
+			getPlottingSystem().setFocus();
 		}
 	}
 
@@ -373,7 +378,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
     @Override
     public void dispose() {
     	augmenter.dispose();
-     	if (plottingSystem!=null) plottingSystem.dispose();
+     	if (getPlottingSystem()!=null) getPlottingSystem().dispose();
      	super.dispose();
     }
 
@@ -383,7 +388,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		if (clazz == Page.class) {
 			return new HeaderTablePage(EclipseUtils.getFilePath(getEditorInput()));
 		} else if (clazz == IToolPageSystem.class) {
-			return plottingSystem;
+			return getPlottingSystem();
 		}
 		
 		return super.getAdapter(clazz);
