@@ -125,7 +125,17 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	public boolean isDirty() {
 		return false;
 	}
-	
+
+	public void logError(Logger logger, String message, Exception e, Object where) {
+		StackTraceElement[] stes = e.getStackTrace();
+		int found = stes.length - 1;
+		for( int i = found; i >= 0; i-- ) {
+			if( stes[i].getClassName().startsWith(where.getClass().getName())) {
+				found = i; //Looking for deepest occurance of where class
+			}
+		}
+		logger.error(message + " [" + e.getMessage() + " at " + stes[found] + "]");
+	}
 
 	public void setToolbarsVisible(boolean isVisible) {
 		GridUtils.setVisible(tools, isVisible);
@@ -291,8 +301,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 			}
 			augmenter.setImageCentre(widthInPixels/2.,heightInPixels/2.);
 		} catch (Exception e) {
-			e.printStackTrace();
-			logger.error("Could not create diffraction experiment objects");
+			logError(logger, "Could not create diffraction experiment objects", e, this);
 		}
 	}
 
