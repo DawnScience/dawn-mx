@@ -316,7 +316,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 				AbstractDataset set;
 				try {
 					final ILoaderService service = (ILoaderService)ServiceManager.getService(ILoaderService.class);
-					set = (AbstractDataset)service.getDataset(filePath);
+					set = (AbstractDataset)service.getDataset(filePath, null);
 				} catch (Throwable e) {
 					logger.error("Cannot load file "+filePath, e);
 					return Status.CANCEL_STATUS;
