@@ -22,6 +22,7 @@ import org.dawb.common.ui.util.EclipseUtils;
 import org.dawb.common.ui.util.GridUtils;
 import org.dawb.common.ui.views.HeaderTablePage;
 import org.dawnsci.plotting.api.IPlotActionSystem;
+import org.dawnsci.plotting.api.IPlottingSystem;
 import org.dawnsci.plotting.api.PlotType;
 import org.dawnsci.plotting.api.tool.IToolPageSystem;
 import org.dawnsci.plotting.api.tool.IToolPage.ToolPageRole;
@@ -88,7 +89,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	protected int histoMax = 255;
 	protected IImageTrace imageTrace;
 	
-	private AbstractPlottingSystem plottingSystem;
+	private IPlottingSystem plottingSystem;
 	protected DiffractionImageAugmenter augmenter;
 
 	private DetectorProperties detectorProperties;
@@ -403,7 +404,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		return super.getAdapter(clazz);
 	}
     
-    public AbstractPlottingSystem getPlottingSystem() {
+    public IPlottingSystem getPlottingSystem() {
     	return plottingSystem;
     }
 
