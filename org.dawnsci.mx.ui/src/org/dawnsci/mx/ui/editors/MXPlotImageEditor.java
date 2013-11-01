@@ -12,7 +12,6 @@ package org.dawnsci.mx.ui.editors;
 
 import javax.vecmath.Vector3d;
 
-import org.dawb.common.services.ILoaderService;
 import org.dawb.common.services.ServiceManager;
 import org.dawb.common.ui.editors.IEditorExtension;
 import org.dawb.common.ui.menu.MenuAction;
@@ -66,6 +65,7 @@ import uk.ac.diamond.scisoft.analysis.diffraction.DetectorProperties;
 import uk.ac.diamond.scisoft.analysis.diffraction.DiffractionCrystalEnvironment;
 import uk.ac.diamond.scisoft.analysis.io.DiffractionMetaDataAdapter;
 import uk.ac.diamond.scisoft.analysis.io.IDiffractionMetadata;
+import uk.ac.diamond.scisoft.analysis.io.ILoaderService;
 import uk.ac.diamond.scisoft.analysis.io.IMetaData;
 import uk.ac.diamond.scisoft.analysis.rcp.AnalysisRCPActivator;
 import uk.ac.diamond.scisoft.analysis.rcp.preference.PreferenceConstants;
