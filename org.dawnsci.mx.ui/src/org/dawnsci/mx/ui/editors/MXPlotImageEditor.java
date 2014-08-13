@@ -60,7 +60,7 @@ import org.eclipse.ui.part.Page;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import uk.ac.diamond.scisoft.analysis.dataset.AbstractDataset;
+import uk.ac.diamond.scisoft.analysis.dataset.Dataset;
 import uk.ac.diamond.scisoft.analysis.diffraction.DetectorProperties;
 import uk.ac.diamond.scisoft.analysis.diffraction.DiffractionCrystalEnvironment;
 import uk.ac.diamond.scisoft.analysis.io.DiffractionMetaDataAdapter;
@@ -263,7 +263,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		}
 	}
 
-	protected void processMetadata(AbstractDataset set) {
+	protected void processMetadata(Dataset set) {
 		try {
 			IMetaData localMetaData = set.getMetadata();
 			// Get image size in x and y directions
@@ -313,10 +313,10 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 			protected IStatus run(IProgressMonitor monitor) {
 				
 				final String filePath = EclipseUtils.getFilePath(getEditorInput());
-				AbstractDataset set;
+				Dataset set;
 				try {
 					final ILoaderService service = (ILoaderService)ServiceManager.getService(ILoaderService.class);
-					set = (AbstractDataset)service.getDataset(filePath, null);
+					set = (Dataset)service.getDataset(filePath, null);
 				} catch (Throwable e) {
 					logger.error("Cannot load file "+filePath, e);
 					return Status.CANCEL_STATUS;
