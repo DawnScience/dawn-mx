@@ -87,7 +87,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 	protected int histoMax = 255;
 	protected IImageTrace imageTrace;
 	
-	private IPlottingSystem plottingSystem;
+	private IPlottingSystem<Composite> plottingSystem;
 	protected DiffractionImageAugmenter augmenter;
 
 	private DetectorProperties detectorProperties;
@@ -402,7 +402,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 		return super.getAdapter(clazz);
 	}
     
-    public IPlottingSystem getPlottingSystem() {
+    public IPlottingSystem<Composite> getPlottingSystem() {
     	return plottingSystem;
     }
 
