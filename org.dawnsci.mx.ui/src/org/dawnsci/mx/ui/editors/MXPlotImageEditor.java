@@ -29,6 +29,7 @@ import org.eclipse.dawnsci.analysis.api.io.ILoaderService;
 import org.eclipse.dawnsci.analysis.api.metadata.IDiffractionMetadata;
 import org.eclipse.dawnsci.analysis.api.metadata.IMetadata;
 import org.eclipse.dawnsci.analysis.dataset.impl.Dataset;
+import org.eclipse.dawnsci.analysis.dataset.impl.DatasetUtils;
 import org.eclipse.dawnsci.plotting.api.IPlotActionSystem;
 import org.eclipse.dawnsci.plotting.api.IPlottingSystem;
 import org.eclipse.dawnsci.plotting.api.PlotType;
@@ -315,7 +316,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 				Dataset set;
 				try {
 					final ILoaderService service = (ILoaderService)ServiceManager.getService(ILoaderService.class);
-					set = (Dataset)service.getDataset(filePath, null);
+					set = DatasetUtils.convertToDataset(service.getDataset(filePath, null));
 				} catch (Throwable e) {
 					logger.error("Cannot load file "+filePath, e);
 					return Status.CANCEL_STATUS;
