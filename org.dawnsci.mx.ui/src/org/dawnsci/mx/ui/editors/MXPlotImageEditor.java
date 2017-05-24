@@ -38,7 +38,6 @@ import org.eclipse.dawnsci.plotting.api.trace.ITrace;
 import org.eclipse.dawnsci.analysis.api.metadata.IDiffractionMetadata;
 import org.eclipse.january.dataset.Dataset;
 import org.eclipse.january.dataset.DatasetUtils;
-import org.eclipse.january.metadata.IMetadata;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.MenuManager;
@@ -265,15 +264,14 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 
 	protected void processMetadata(Dataset set) {
 		try {
-			IMetadata localMetaData = set.getMetadata();
+			IDiffractionMetadata localMetaData = set.getFirstMetadata(IDiffractionMetadata.class);
 			// Get image size in x and y directions
 			int[] shape = set.getShape();
 			int heightInPixels = shape[0];
 			int widthInPixels = shape[1];
 
-			if (localMetaData instanceof IDiffractionMetadata) {
-				IDiffractionMetadata localDiffractionMetaData = (IDiffractionMetadata)localMetaData;
-				augmenter.setDiffractionMetadata(localDiffractionMetaData);
+			if (localMetaData != null) {
+				augmenter.setDiffractionMetadata(localMetaData);
 			} else {
 				// Set a few default values
 				double pixelSizeX = 0.1024;
@@ -283,7 +281,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 				// Create the detector origin vector based on the above
 				double[] detectorOrigin = { (widthInPixels - widthInPixels/2d) * pixelSizeX, (heightInPixels - heightInPixels/2d) * pixelSizeY, distance };
 
-				detectorProperties = new DetectorProperties(new Vector3d(detectorOrigin), heightInPixels, widthInPixels, 
+				detectorProperties = new DetectorProperties(new Vector3d(detectorOrigin), heightInPixels, widthInPixels,
 						pixelSizeX, pixelSizeY, null);
 
 				// Set a few default values
@@ -296,7 +294,7 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 
 				localMetaData = new MXMetadataAdapter(detectorProperties.clone(), diffractionCrystalEnvironment.clone());
 
-				augmenter.setDiffractionMetadata((IDiffractionMetadata) localMetaData);
+				augmenter.setDiffractionMetadata(localMetaData);
 				set.setMetadata(localMetaData);
 			}
 			augmenter.setImageCentre(widthInPixels/2.,heightInPixels/2.);
