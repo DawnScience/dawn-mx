@@ -11,7 +11,6 @@ package org.dawnsci.mx.ui.editors;
 
 import javax.vecmath.Vector3d;
 
-import org.dawb.common.services.ServiceManager;
 import org.dawb.common.ui.editors.IEditorExtension;
 import org.dawb.common.ui.menu.MenuAction;
 import org.dawb.common.ui.util.EclipseUtils;
@@ -26,6 +25,7 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.dawnsci.analysis.api.diffraction.DetectorProperties;
 import org.eclipse.dawnsci.analysis.api.diffraction.DiffractionCrystalEnvironment;
 import org.eclipse.dawnsci.analysis.api.io.ILoaderService;
+import org.eclipse.dawnsci.analysis.api.metadata.IDiffractionMetadata;
 import org.eclipse.dawnsci.plotting.api.IPlotActionSystem;
 import org.eclipse.dawnsci.plotting.api.IPlottingSystem;
 import org.eclipse.dawnsci.plotting.api.PlotType;
@@ -35,7 +35,6 @@ import org.eclipse.dawnsci.plotting.api.tool.IToolPageSystem;
 import org.eclipse.dawnsci.plotting.api.trace.ColorOption;
 import org.eclipse.dawnsci.plotting.api.trace.IImageTrace;
 import org.eclipse.dawnsci.plotting.api.trace.ITrace;
-import org.eclipse.dawnsci.analysis.api.metadata.IDiffractionMetadata;
 import org.eclipse.january.dataset.Dataset;
 import org.eclipse.january.dataset.DatasetUtils;
 import org.eclipse.jface.action.Action;
@@ -62,6 +61,8 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.dialogs.PreferencesUtil;
 import org.eclipse.ui.part.EditorPart;
 import org.eclipse.ui.part.Page;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.FrameworkUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -313,7 +314,11 @@ public class MXPlotImageEditor extends EditorPart implements IReusableEditor, IE
 				final String filePath = EclipseUtils.getFilePath(getEditorInput());
 				Dataset set;
 				try {
-					final ILoaderService service = (ILoaderService)ServiceManager.getService(ILoaderService.class);
+					BundleContext bundleContext =
+							FrameworkUtil.
+							getBundle(this.getClass()).
+							getBundleContext();
+					final ILoaderService service = bundleContext.getService(bundleContext.getServiceReference(ILoaderService.class));
 					set = DatasetUtils.convertToDataset(service.getDataset(filePath, null));
 				} catch (Throwable e) {
 					logger.error("Cannot load file "+filePath, e);
